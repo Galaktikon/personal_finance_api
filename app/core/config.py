@@ -1,7 +1,8 @@
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +12,7 @@ class Settings(BaseSettings):
     app_env: Literal["local", "test", "production"] = "local"
     database_url: str
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    neon_auth_base_url: str | None = None
 
     @field_validator("database_url")
     @classmethod
@@ -18,6 +20,29 @@ class Settings(BaseSettings):
         if not value.startswith("postgresql+psycopg://"):
             raise ValueError("DATABASE_URL must use postgresql+psycopg://")
         return value
+
+    @field_validator("neon_auth_base_url")
+    @classmethod
+    def validate_auth_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        url = urlsplit(value)
+        if (
+            url.scheme != "https"
+            or not url.hostname
+            or url.username
+            or url.password
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError("NEON_AUTH_BASE_URL must be an HTTPS URL without credentials or query")
+        return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def require_production_auth(self) -> "Settings":
+        if self.app_env == "production" and not self.neon_auth_base_url:
+            raise ValueError("NEON_AUTH_BASE_URL is required in production")
+        return self
 
 
 @lru_cache
