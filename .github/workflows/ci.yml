@@ -41,6 +41,8 @@ jobs:
       - name: Type check
         run: python -m uv run mypy app
       - name: Migrate from empty database
-        run: python -m uv run alembic upgrade head
+        run: |
+          python -m uv run alembic upgrade head
+          python -m uv run alembic check
       - name: Run tests
         run: python -m uv run pytest -q

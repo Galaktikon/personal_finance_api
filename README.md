@@ -2,7 +2,7 @@
 
 FastAPI foundation for a personal finance analytics backend. The MVP will manage accounts and transactions, import synthetic CSV/JSON data, and report spending and cash flow. It uses PostgreSQL, SQLAlchemy, and Alembic. Neon Auth integration is a Phase 3 gate.
 
-**Status:** Phase 1 foundation. Health endpoints are implemented; financial models and business endpoints begin in later phases.
+**Status:** Phase 2 financial domain and PostgreSQL schema. Health endpoints and financial invariants are implemented; authenticated business endpoints begin in Phase 3.
 
 ## Local setup
 
@@ -29,7 +29,7 @@ uv run mypy app
 uv run pytest -q
 ```
 
-Set `TEST_DATABASE_URL` to a separate PostgreSQL database URL to run the integration connection test. CI starts a PostgreSQL service, migrates it from empty, and runs the full suite. The Phase 1 migration establishes an empty baseline; domain tables arrive in Phase 2.
+Set `TEST_DATABASE_URL` to a separate, already migrated PostgreSQL database URL to run the integration tests. CI starts a PostgreSQL service, migrates it from empty, checks schema drift, and runs the full suite. Local tests can use the Docker Compose database after `uv run alembic upgrade head` when it contains no personal data.
 
 ## Project docs
 
@@ -37,6 +37,7 @@ Set `TEST_DATABASE_URL` to a separate PostgreSQL database URL to run the integra
 - [Documentation index](docs/README.md) — requirements, design, ADRs, diagrams, and open decisions.
 - [Roadmap](docs/roadmap.md) — phase checkpoints.
 - [Phase 1 checkpoint](docs/checkpoints/phase-1.md) — delivered foundation and verification results.
+- [Phase 2 checkpoint](docs/checkpoints/phase-2.md) — domain schema and financial rule verification.
 
 The documentation establishes intended future behavior. Use synthetic financial data only.
 

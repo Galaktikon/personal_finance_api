@@ -22,6 +22,7 @@ The [project development plan](project-plan.md) is the full scope and phased del
 - [ADR-003: Neon Auth and authorization](adr/ADR-003-neon-auth-and-authorization.md)
 - [ADR-004: duplicates and idempotency](adr/ADR-004-duplicate-detection-and-idempotency.md)
 - [ADR-005: analytics definitions](adr/ADR-005-analytics-definitions.md)
+- [ADR-006: ownership and schema integrity](adr/ADR-006-ownership-and-schema-integrity.md)
 
 ## Diagram sources
 
