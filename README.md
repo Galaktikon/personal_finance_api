@@ -1,8 +1,8 @@
 # Personal Finance Analytics API
 
-FastAPI foundation for a personal finance analytics backend. The MVP manages accounts and transactions, imports synthetic CSV/JSON data, and will report spending and cash flow. It uses PostgreSQL, SQLAlchemy, Alembic, and Neon Auth JWT verification.
+FastAPI foundation for a personal finance analytics backend. The MVP manages accounts and transactions, imports synthetic CSV/JSON data, and reports spending and cash flow. It uses PostgreSQL, SQLAlchemy, Alembic, and Neon Auth JWT verification.
 
-**Status:** Phase 4 authenticated CRUD, CSV/JSON imports, categorization rules, and transfer matching. Analytics is Phase 5.
+**Status:** Phase 5 authenticated CRUD, CSV/JSON imports, categorization rules, transfer matching, and analytics.
 
 ## Local setup
 
@@ -47,6 +47,8 @@ Phase 3 tests issue synthetic Ed25519 JWTs and supply a fake JWKS. They do not r
 
 Phase 4 tests use synthetic transactions and the same synthetic authentication. The [import guide](docs/import-pipeline.md) defines CSV/JSON fields, limits, preview and commit behavior, and duplicate policy. Import commits require `Idempotency-Key`; previews do not. The API docs at `/docs` show the multipart upload fields and the rule and transfer routes.
 
+Phase 5 adds summary, monthly trend, category, and merchant analytics at `/api/v1/analytics/*`. The [API contract](docs/api-contracts.md#phase-5-analytics-contract) defines filters, response fields, and empty-period behavior. The synthetic tests reconcile the published totals against separately calculated amounts.
+
 ## Project docs
 
 - [Development plan](docs/project-plan.md) — complete scope, phases, acceptance criteria, and definition of done.
@@ -56,6 +58,7 @@ Phase 4 tests use synthetic transactions and the same synthetic authentication. 
 - [Phase 2 checkpoint](docs/checkpoints/phase-2.md) — domain schema and financial rule verification.
 - [Phase 3 checkpoint](docs/checkpoints/phase-3.md) — authentication and user-scoped CRUD verification.
 - [Phase 4 checkpoint](docs/checkpoints/phase-4.md) — import, categorization, and transfer verification.
+- [Phase 5 checkpoint](docs/checkpoints/phase-5.md) — analytics formulas and PostgreSQL verification.
 
 The documentation establishes intended future behavior. Use synthetic financial data only.
 

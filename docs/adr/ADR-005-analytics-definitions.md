@@ -9,6 +9,8 @@ For posted transactions, gross income is the sum of income; gross expenses are t
 
 Use `start_date <= transaction_date < end_date`. Return zero amounts for empty periods. Document and test zero-denominator percentage behavior before publishing percentage metrics.
 
+Phase 5 publishes no percentages. Monthly trends include only months with posted activity. Category and merchant breakdowns include expenses and refunds, including negative net spending where refunds exceed expenses. Empty list results are `[]`.
+
 ## Consequences
 
 Every analytics endpoint and synthetic expected-total fixture must reconcile to these formulas. Credit card payments do not double-count purchases. Pending and voided records are excluded by default.

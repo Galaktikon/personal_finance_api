@@ -1,6 +1,6 @@
 # API contracts
 
-This is the HTTP surface. Phase 3 account, transaction, and category routes and Phase 4 import, rule, and transfer routes are implemented; analytics remains planned. Every business route requires a verified Neon Auth Bearer JWT and derives ownership from its verified subject.
+This is the HTTP surface. Phase 3–5 routes are implemented. Every business route requires a verified Neon Auth Bearer JWT and derives ownership from its verified subject.
 
 | Group | Planned routes |
 |---|---|
@@ -44,10 +44,20 @@ Rules list with `limit` and `offset`, including visible system rules. `POST /api
 
 `POST /api/v1/transfers/match` accepts `source_transaction_id` and `destination_transaction_id`. Both must be owned, posted, unlinked, in distinct accounts, and have equal opposite amounts; the source is an expense and destination an income or refund. It returns `201` with the link, converts the pair to transfer kinds, and records revisions. `DELETE /api/v1/transfers/{id}` restores prior kinds and categories and returns `204`. Another user's link returns `404`; a linked transaction cannot be edited until unmatched.
 
+## Phase 5 analytics contract
+
+All four `GET /api/v1/analytics/*` endpoints accept optional `account_id` (owned account, including archived accounts), `start_date` (inclusive), and `end_date` (exclusive). If both dates are supplied, start must precede end. An inaccessible account returns `404`; an invalid range returns `422`. Only posted income, expense, and refund transactions are included. Pending, voided, and transfer transactions are excluded. USD amounts are exact decimal strings with two fractional digits.
+
+`GET /summary` returns `currency`, the applied date and account filters, `transaction_count`, `gross_income`, `gross_expenses`, `refunds`, `net_spending`, and `net_cash_flow`. Gross expenses are positive. Net spending is expenses minus refunds; net cash flow is income minus expenses plus refunds. An empty selection has count zero and all amounts `"0.00"`.
+
+`GET /monthly-trends` returns one row per month with qualifying activity, ordered by month ascending. Each row has `month` (`YYYY-MM`), count, and the five summary amounts. Months with no qualifying rows are omitted. `GET /categories` and `GET /merchants` return expense/refund breakdowns with count, gross expenses, refunds, and net spending. Category rows identify `category_id` and `category_name`; uncategorized transactions use null values. Merchant rows use a case-insensitive normalized merchant name; missing merchant is null. Refund-only groups may have negative net spending. These three list endpoints accept `limit` (1–100, default 50) and `offset` (default 0); breakdowns sort by net spending descending, then name and ID where applicable. An empty selection returns `[]`.
+
+No percentages are published. A percentage of net spending is misleading when refunds make the denominator zero or negative; a future percentage metric needs its own explicit denominator and zero-denominator convention.
+
 ## Errors and authorization
 
 Missing, invalid, expired, wrongly scoped, or incorrectly signed credentials return `401` with a generic detail and `WWW-Authenticate: Bearer`. An unavailable JWKS or unconfigured local Auth URL returns `503`. A nonexistent or other-user record returns `404`. Invalid input or violated financial constraints returns `422`; editing or voiding a linked transfer returns `409`. Request bodies reject caller-supplied `user_id`. Health routes do not require authentication.
 
 ## Contract work by phase
 
-Phase 5 finalizes analytics response schemas and zero-denominator behavior. OpenAPI examples are checked against actual responses in later phases.
+Phase 6 checks OpenAPI examples against actual responses and hardens end-to-end behavior.

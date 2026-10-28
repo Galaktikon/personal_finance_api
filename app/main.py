@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response, status
 
 from app.api.v1.accounts import router as accounts_router
+from app.api.v1.analytics import router as analytics_router
 from app.api.v1.categories import router as categories_router
 from app.api.v1.categorization_rules import router as rules_router
 from app.api.v1.imports import router as imports_router
@@ -26,6 +27,7 @@ app.include_router(categories_router, prefix="/api/v1")
 app.include_router(rules_router, prefix="/api/v1")
 app.include_router(transfers_router, prefix="/api/v1")
 app.include_router(imports_router, prefix="/api/v1")
+app.include_router(analytics_router, prefix="/api/v1")
 
 
 @app.get("/health/live", tags=["health"])
