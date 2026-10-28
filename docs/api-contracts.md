@@ -58,6 +58,8 @@ No percentages are published. A percentage of net spending is misleading when re
 
 Missing, invalid, expired, wrongly scoped, or incorrectly signed credentials return `401` with a generic detail and `WWW-Authenticate: Bearer`. An unavailable JWKS or unconfigured local Auth URL returns `503`. A nonexistent or other-user record returns `404`. Invalid input or violated financial constraints returns `422`; editing or voiding a linked transfer returns `409`. Request bodies reject caller-supplied `user_id`. Health routes do not require authentication.
 
+Validation `422` responses contain `detail` entries with error `type` only, without submitted values or user-supplied field names. Unexpected failures return `500` with a generic detail. A body above `REQUEST_MAX_BYTES` returns `413`; the default limit is 3 MB and must exceed `IMPORT_MAX_BYTES` to accommodate multipart overhead.
+
 ## Contract work by phase
 
 Phase 6 checks OpenAPI examples against actual responses and hardens end-to-end behavior.

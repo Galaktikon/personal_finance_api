@@ -25,3 +25,12 @@ def test_neon_auth_url_must_be_https() -> None:
             database_url="postgresql+psycopg://localhost/finance",
             neon_auth_base_url="http://auth.example.test/neondb/auth",
         )
+
+
+def test_request_limit_must_exceed_import_file_limit() -> None:
+    with pytest.raises(ValidationError, match="REQUEST_MAX_BYTES"):
+        Settings(
+            database_url="postgresql+psycopg://localhost/finance",
+            import_max_bytes=100,
+            request_max_bytes=100,
+        )

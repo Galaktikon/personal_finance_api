@@ -20,6 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.v1 import imports as import_routes
+from app.api.v1 import transfers as transfer_routes
 from app.core import security
 from app.core.config import get_settings
 from app.db.session import get_session
@@ -31,7 +32,9 @@ from app.models import (
     ImportRecord,
     Transaction,
     TransactionRevision,
+    TransferLink,
 )
+from scripts.demo_synthetic import run_demo
 
 AUTH_URL = "https://phase4.example.test/neondb/auth"
 ORIGIN = "https://phase4.example.test"
@@ -228,6 +231,7 @@ def test_preview_commit_partial_success_and_idempotency(api4: Harness) -> None:
         == 404
     )
     assert api4.client.get("/api/v1/imports", headers=api4.headers("bob")).json() == []
+    assert upload(api4, "bob", aid, rows, preview=True).status_code == 404
 
     repeated = upload(api4, "alice", aid, rows, key="second")
     assert repeated.status_code == 201
@@ -305,6 +309,12 @@ def test_rule_ownership_and_precedence(api4: Harness) -> None:
     own_category = category(api4, "alice")
     bob_category = category(api4, "bob", "Bob food")
     user_rule = rule(api4, "alice", own_category)
+    bob_rule = rule(api4, "bob", bob_category)
+    alice_rules = api4.client.get(
+        "/api/v1/categorization-rules", headers=api4.headers("alice")
+    ).json()
+    assert user_rule in {item["id"] for item in alice_rules}
+    assert bob_rule not in {item["id"] for item in alice_rules}
     with Session(
         api4.connection, expire_on_commit=False, join_transaction_mode="create_savepoint"
     ) as session:
@@ -529,3 +539,112 @@ def test_import_limits_and_bad_input(api4: Harness, monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("IMPORT_MAX_BYTES", "10")
     get_settings.cache_clear()
     assert upload(api4, "alice", aid, [expense()], preview=True).status_code == 413
+
+
+def test_transfer_failure_rolls_back_classifications_and_link(
+    api4: Harness, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    checking = account(api4, "alice")
+    savings = account(api4, "alice", "Savings", "savings")
+    source = api4.client.post(
+        "/api/v1/transactions",
+        headers=api4.headers("alice"),
+        json={
+            "account_id": checking,
+            "transaction_date": "2024-02-29",
+            "amount": "-25.00",
+            "description": "Private source description",
+            "kind": "expense",
+        },
+    ).json()["id"]
+    destination = api4.client.post(
+        "/api/v1/transactions",
+        headers=api4.headers("alice"),
+        json={
+            "account_id": savings,
+            "transaction_date": "2024-02-29",
+            "amount": "25.00",
+            "description": "Private destination description",
+            "kind": "income",
+        },
+    ).json()["id"]
+
+    def fail_after_flush(_: Session) -> None:
+        raise SQLAlchemyError("synthetic secret SQL and private financial record")
+
+    match_body = {"source_transaction_id": source, "destination_transaction_id": destination}
+    with monkeypatch.context() as patch:
+        patch.setattr(transfer_routes, "commit_or_unprocessable", fail_after_flush)
+        with caplog.at_level("ERROR"):
+            response = api4.client.post(
+                "/api/v1/transfers/match",
+                headers=api4.headers("alice"),
+                json=match_body,
+            )
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Operation could not be completed"}
+    assert "secret" not in caplog.text
+    assert "Private" not in caplog.text
+    with Session(api4.connection, join_transaction_mode="create_savepoint") as session:
+        assert count(session, TransferLink) == 0
+        assert count(session, TransactionRevision) == 0
+        assert session.get(Transaction, source).kind == "expense"  # type: ignore[union-attr]
+        assert session.get(Transaction, destination).kind == "income"  # type: ignore[union-attr]
+
+    matched = api4.client.post(
+        "/api/v1/transfers/match", headers=api4.headers("alice"), json=match_body
+    )
+    assert matched.status_code == 201
+    with monkeypatch.context() as patch:
+        patch.setattr(transfer_routes, "commit_or_unprocessable", fail_after_flush)
+        failed_unmatch = api4.client.delete(
+            f"/api/v1/transfers/{matched.json()['id']}", headers=api4.headers("alice")
+        )
+    assert failed_unmatch.status_code == 500
+    with Session(api4.connection, join_transaction_mode="create_savepoint") as session:
+        assert count(session, TransferLink) == 1
+        assert count(session, TransactionRevision) == 2
+        assert session.get(Transaction, source).kind == "transfer_out"  # type: ignore[union-attr]
+        assert session.get(Transaction, destination).kind == "transfer_in"  # type: ignore[union-attr]
+
+
+def test_synthetic_demo_is_repeatable(api4: Harness) -> None:
+    api4.client.headers.update(api4.headers("alice"))
+    first = run_demo(api4.client)
+    second = run_demo(api4.client)
+    assert first["account_id"] == second["account_id"]
+    assert first["import_id"] == second["import_id"]
+    assert first["gross_income"] == "2500.00"
+    assert first["gross_expenses"] == "130.00"
+    assert first["refunds"] == "20.00"
+    assert first["net_cash_flow"] == "2390.00"
+    with Session(api4.connection, join_transaction_mode="create_savepoint") as session:
+        assert count(session, ImportJob) == 1
+        assert count(session, Transaction) == 5
+
+
+def test_validation_errors_and_logs_do_not_echo_private_input(api4: Harness) -> None:
+    secret = "PRIVATE_RAW_FINANCIAL_RECORD_123"
+    response = api4.client.post(
+        "/api/v1/accounts",
+        headers=api4.headers("alice"),
+        json={"name": "Checking", "type": "checking", secret: secret},
+    )
+    assert response.status_code == 422
+    assert secret not in response.text
+    assert response.json() == {"detail": [{"type": "extra_forbidden"}]}
+
+
+def test_request_body_limit_covers_streamed_uploads(
+    api4: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IMPORT_MAX_BYTES", "10")
+    monkeypatch.setenv("REQUEST_MAX_BYTES", "100")
+    get_settings.cache_clear()
+    response = api4.client.post(
+        "/api/v1/accounts",
+        headers=api4.headers("alice"),
+        content=(piece for piece in (b'{"name":"', b"x" * 150, b'","type":"checking"}')),
+    )
+    assert response.status_code == 413
+    assert response.json() == {"detail": "Request body exceeds size limit"}

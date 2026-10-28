@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     neon_auth_base_url: str | None = None
     import_max_bytes: int = Field(default=2_000_000, ge=1, le=20_000_000)
     import_max_rows: int = Field(default=5_000, ge=1, le=100_000)
+    request_max_bytes: int = Field(default=3_000_000, ge=1, le=25_000_000)
 
     @field_validator("database_url")
     @classmethod
@@ -44,6 +45,8 @@ class Settings(BaseSettings):
     def require_production_auth(self) -> "Settings":
         if self.app_env == "production" and not self.neon_auth_base_url:
             raise ValueError("NEON_AUTH_BASE_URL is required in production")
+        if self.request_max_bytes <= self.import_max_bytes:
+            raise ValueError("REQUEST_MAX_BYTES must exceed IMPORT_MAX_BYTES")
         return self
 
 
