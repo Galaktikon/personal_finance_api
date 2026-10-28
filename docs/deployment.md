@@ -1,32 +1,160 @@
-# Deployment and release checks
+# Manual Render setup and complete verification
 
-Phase 7 targets a Render Docker web service connected to one Neon PostgreSQL branch with Neon Auth enabled. The checked-in [Render Blueprint](../render.yaml) selects the free web-service plan, disables automatic deploys, requests both environment-specific URLs at creation, and uses `/health/ready` for health checks. This is a portfolio preview configuration. Render's [free-service documentation](https://render.com/docs/free) describes idle spin-down and other limits; its [deploy documentation](https://render.com/docs/deploys) says pre-deploy commands require a paid web service. The Docker image therefore runs `alembic upgrade head` before starting Uvicorn on every startup. Use one instance; do not start multiple instances against an unmigrated database at the same time.
+This guide prepares a Render Docker Web Service backed by one Neon PostgreSQL branch with Neon Auth enabled. **No public service has been created for this project.** Run the local checks now; use the hosted steps when you choose to publish. Use synthetic financial data only. The checked-in [Render Blueprint](../render.yaml) is an alternative to the manual Web Service form.
 
-## Environment and secrets
+Commands assume PowerShell 7, [uv](https://docs.astral.sh/uv/), Python 3.11, and Docker Desktop. Run them from the repository root. Keep database URLs, JWTs, and deploy hooks out of source, screenshots, and command arguments.
 
-Create a Neon project or branch and enable Managed Better Auth for that branch. Copy its PostgreSQL connection string and Auth URL from the same branch. Keep the database URL private, change its scheme from `postgresql://` to `postgresql+psycopg://`, and retain `sslmode=require` (or a stronger TLS mode). Render's initial Blueprint setup prompts for `DATABASE_URL` and `NEON_AUTH_BASE_URL`; provide them there, not in source. Render exposes service environment variables as Docker build arguments, so the Dockerfile must never reference these secrets. The application requires `APP_ENV=production`, the matching HTTPS Auth URL, and a TLS database URL at startup. See [ADR-003](adr/ADR-003-neon-auth-and-authorization.md) for JWT and branch constraints and Neon's [JWT plugin guide](https://neon.com/docs/auth/guides/plugins/jwt) for the client token flow.
+## 1. Run the full local gate
 
-The remaining settings in `render.yaml` set a 2 MB file limit, 5,000-row import limit, and 3 MB total body limit. The Docker command disables Uvicorn access logs. Keep raw URL logging disabled at the Render edge or any added proxy, and apply an ingress request limit there as well. `GET /health/live` does not depend on PostgreSQL; `GET /health/ready` checks the application database.
+Copy [.env.example](../.env.example) to `.env`, install dependencies, start local PostgreSQL, and migrate it as shown in the [README](../README.md#local-setup). Use only the example local credentials for Docker Compose. The local test database must be disposable and contain no personal data.
 
-## Deploy sequence
+```powershell
+uv sync --locked --all-groups
+docker compose up -d db
+uv run alembic upgrade head
+$env:TEST_DATABASE_URL = 'postgresql+psycopg://finance:finance_local_only@localhost:5432/finance'
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy app
+uv run alembic check
+uv run pytest -q
+uv run --all-groups python scripts/verify_clean_migration.py
+docker build -t personal-finance-api:manual .
+```
 
-1. Push the reviewed branch and wait for the [GitHub Actions CI workflow](../.github/workflows/ci.yml) to pass. Its PostgreSQL service starts empty; the workflow installs locked dependencies, checks formatting/types, applies migrations, checks drift, and runs all tests.
-2. In Render, create a Blueprint from this repository and select the reviewed branch containing `render.yaml`. Set the prompted Neon URLs. Confirm the plan before creating the service. The Blueprint disables automatic deploys so a later code push does not publish without a review.
-3. Start the initial deploy or a manual deploy. The image builds from the lockfile; startup applies Alembic migrations before binding to Render's `PORT`. Wait for Render's `/health/ready` check to pass. Do not seed real financial data.
-4. Run `uv run --all-groups python scripts/smoke_deployment.py --base-url https://<service>.onrender.com`. It checks liveness, readiness, OpenAPI, and anonymous rejection. Set `DEMO_BEARER_TOKEN` to a JWT obtained by signing in through the paired Neon Auth SDK and repeat the smoke check to exercise authenticated access. Never put the token in a command argument or source file.
-5. Run the [synthetic demo loader](demo.md) with the same token and deployed base URL. Confirm the documented totals, import replay, and user-scoped account/transaction access. Repeat with a second test user to verify isolation before sharing the URL publicly.
+The test suite covers synthetic JWT verification, ownership, CRUD, imports and replay, categorization, transfers, analytics, limits, and rollback. The clean-migration probe creates and removes its own temporary **local** database. All commands must exit successfully; `alembic check` should report no new upgrade operations. The Docker build checks the production image and lockfile. See the [Phase 7 checkpoint](checkpoints/phase-7.md) for the last recorded local results.
 
-For later releases, save the service's secret [Render deploy hook](https://render.com/docs/deploy-hooks) as the GitHub repository secret `RENDER_DEPLOY_HOOK_URL`. Manually run the CI workflow with `workflow_dispatch` on the reviewed commit. Its deploy job runs only after checks pass and asks Render to deploy that exact commit. The hook starts a deploy; inspect its progress in Render and run the smoke script again before sharing the new version.
+For a local HTTP smoke check, start `uv run uvicorn app.main:app --no-access-log` in a second PowerShell window after migrating, then run `uv run --all-groups python scripts/smoke_deployment.py --base-url http://127.0.0.1:8000` in the first. It checks health, OpenAPI, and anonymous access without requiring Neon Auth. Stop the local server after the check.
 
-## Troubleshooting
+Push the reviewed commit and check that the [GitHub Actions CI workflow](../.github/workflows/ci.yml) passes on that commit before deploying. CI starts an empty PostgreSQL service, applies migrations, checks schema drift, and runs the same lint, type, and test gates. A local pass does not establish a remote CI pass.
 
-- **Build fails:** verify `uv.lock` is current and the Docker build passes locally (`docker build -t personal-finance-api:phase7 .`).
-- **Startup fails:** verify both prompted URLs are set for the same Neon branch, the database scheme is `postgresql+psycopg://`, TLS mode is present, and the database user can run migrations. Read the fixed startup error and Alembic revision messages; keep connection strings out of logs and support tickets.
-- **Liveness passes but readiness fails:** check Neon connectivity and whether migrations reached `head`; run `alembic check` in a controlled environment with that branch URL.
-- **Authenticated route returns `401`:** obtain a fresh `authClient.token()` JWT from the paired branch and verify issuer, audience, and JWKS URL against [ADR-003](adr/ADR-003-neon-auth-and-authorization.md). A browser session cookie alone is not accepted.
-- **Authenticated route returns `503`:** check the Auth URL and JWKS availability. An unconfigured Auth URL produces a generic service-unavailable response.
-- **A free service responds slowly after idle:** Render documents spin-down and cold-start behavior for its free plan; use a paid plan if the portfolio needs continuous availability.
+## 2. Prepare one Neon branch
 
-## Current evidence
+1. Create a Neon project and select the branch reserved for this preview. Enable Neon Auth for **that branch**. Follow Neon's [React Auth quickstart](https://neon.com/docs/auth/quick-start/react) and [JWT guide](https://neon.com/docs/auth/guides/plugins/jwt) for client sign-in and token retrieval.
+2. Copy the branch's PostgreSQL connection string and its public Auth URL from Neon. Convert only the URL scheme from `postgresql://` to `postgresql+psycopg://`; preserve the host, database, user, password, and query settings. Ensure `sslmode=require` or a stronger TLS mode is present. `DATABASE_URL` and `NEON_AUTH_BASE_URL` must refer to the same branch. The Auth URL is a base URL, not a JWT or secret key.
+3. Create two disposable Neon Auth users, A and B, for the hosted isolation check. Configure the Auth app's allowed/trusted domains for the client origin used to sign them in. For a real public app, review Neon's [production checklist](https://neon.com/docs/auth/production-checklist), including email provider, verification, and OAuth settings if used.
 
-The [Phase 6 checkpoint](checkpoints/phase-6.md) records local PostgreSQL, clean-migration, container, and synthetic-auth evidence. The [Phase 7 checkpoint](checkpoints/phase-7.md) distinguishes prepared deployment artifacts from live Render, Neon Auth, and remote CI checks. Do not describe the API as publicly deployed until the live checks above pass.
+The API has no sign-in UI. Sign users in with a Neon Auth client configured for this branch, then call `authClient.token()` to get each user's short-lived Bearer JWT. The [README example](../README.md#local-setup) shows the API request. A browser session cookie by itself will not authenticate API calls. Refresh expired tokens before a test.
+
+## 3. Create the Render service manually
+
+In the [Render Dashboard](https://dashboard.render.com/), select **New > Web Service**, connect the GitHub repository, and choose the reviewed branch. Verify its latest commit is the one that passed CI. Set these fields in the Web Service form:
+
+| Render field | Value |
+|---|---|
+| Name | `personal-finance-api` or another unique name |
+| Language/runtime | `Docker` |
+| Root directory | Repository root (leave blank) |
+| Dockerfile path | `./Dockerfile` |
+| Docker command | Leave blank; the image command migrates then starts Uvicorn |
+| Instance type | Free for a portfolio preview; confirm the selected plan in Render |
+| Auto-Deploy | Off |
+| Health check path | `/health/ready` |
+
+Add these **service environment variables** in Render. Enter the two branch URLs in Render's environment editor, never in `render.yaml` or `.env` committed to Git:
+
+| Key | Value |
+|---|---|
+| `APP_ENV` | `production` |
+| `DATABASE_URL` | The private Neon branch URL with `postgresql+psycopg://` and TLS |
+| `NEON_AUTH_BASE_URL` | The paired branch's HTTPS Neon Auth base URL |
+| `PORT` | `10000` |
+| `IMPORT_MAX_BYTES` | `2000000` |
+| `IMPORT_MAX_ROWS` | `5000` |
+| `REQUEST_MAX_BYTES` | `3000000` |
+
+Render's [Docker documentation](https://render.com/docs/docker) explains its Docker service settings and environment behavior. The Dockerfile does not reference service secrets during build. The image runs `alembic upgrade head` at startup, then binds to `0.0.0.0:$PORT`; Render's [pre-deploy command](https://render.com/docs/deploys) is unavailable on the free Web Service plan. Use one service instance while migrations run. Keep raw URL access logging disabled at Render or any added proxy, and set an ingress body limit there as well.
+
+Create the service and inspect the **Deploys** page. The first deploy should build successfully, migrate the branch, start the server, and pass `/health/ready`. Record the HTTPS service URL. Automatic deploys remain off; use **Manual Deploy > Deploy latest commit** (or select a specific reviewed commit) for later releases. A free service may sleep after idle and take time to wake, per [Render's free service guide](https://render.com/docs/free).
+
+## 4. Check the public, unauthenticated surface
+
+Replace the placeholder with your actual service URL. These checks require no Auth account:
+
+```powershell
+$base = 'https://<service>.onrender.com'
+uv run --all-groups python scripts/smoke_deployment.py --base-url $base
+Invoke-RestMethod "$base/health/live"
+Invoke-RestMethod "$base/health/ready"
+```
+
+The script checks both health endpoints (`{"status":"ok"}`), required OpenAPI routes, the [no-login CSV demo](../README.md#no-login-csv-demo) and its sample result, and `401` for anonymous `GET /api/v1/accounts`. Inspect `$base/`, `$base/docs`, and `$base/openapi.json` in a browser. A `503` on readiness means the database dependency is not ready; a `200` liveness response alone is insufficient. Avoid placing private values in URLs.
+
+## 5. Check live Neon Auth
+
+Using the client paired with the same branch, sign in as test user A and obtain `data.token` from `authClient.token()`. In PowerShell 7, enter it without echoing or storing it in command history:
+
+```powershell
+$env:DEMO_BEARER_TOKEN = Read-Host -MaskInput 'User A Bearer JWT'
+uv run --all-groups python scripts/smoke_deployment.py --base-url $base
+$headersA = @{ Authorization = "Bearer $env:DEMO_BEARER_TOKEN" }
+Invoke-RestMethod "$base/api/v1/accounts" -Headers $headersA
+```
+
+The authenticated accounts call must return a JSON array, including `[]` on a fresh user. Check the negative paths without sending a real token:
+
+```powershell
+$anonymous = Invoke-WebRequest "$base/api/v1/accounts" -SkipHttpErrorCheck
+$invalid = Invoke-WebRequest "$base/api/v1/accounts" -Headers @{ Authorization = 'Bearer deliberately-invalid' } -SkipHttpErrorCheck
+$anonymous.StatusCode, $invalid.StatusCode
+$anonymous.Headers['WWW-Authenticate'], $invalid.Headers['WWW-Authenticate']
+```
+
+Both status codes must be `401`, with a Bearer challenge. A JWT from a different Auth branch, wrong audience, or expired session must also be rejected. Do not use a real user's token in a shared test transcript.
+
+## 6. Load and inspect the synthetic demo
+
+With user A's token still in `DEMO_BEARER_TOKEN`, run the loader twice:
+
+```powershell
+uv run --all-groups python scripts/demo_synthetic.py --base-url $base
+uv run --all-groups python scripts/demo_synthetic.py --base-url $base
+$accountsA = Invoke-RestMethod "$base/api/v1/accounts" -Headers $headersA
+$demoAccount = $accountsA | Where-Object name -eq 'Synthetic Demo Checking' | Select-Object -First 1
+Invoke-RestMethod "$base/api/v1/transactions?account_id=$($demoAccount.id)" -Headers $headersA
+Invoke-RestMethod "$base/api/v1/imports" -Headers $headersA
+Invoke-RestMethod "$base/api/v1/analytics/summary?account_id=$($demoAccount.id)" -Headers $headersA
+```
+
+On a fresh demo account, each loader run should print gross income `2500.00`, gross expenses `130.00`, refunds `20.00`, and net cash flow `2390.00`. The summary should show net spending `110.00` and four posted transactions; the fifth transaction is pending and excluded from analytics. The second run should reuse the import job and leave the transaction count unchanged. In `/docs`, inspect the demo account's import job and all four analytics routes (`summary`, `monthly-trends`, `categories`, `merchants`) with `account_id`; compare their figures with the [demo guide](demo.md) and [analytics contract](api-contracts.md#phase-5-analytics-contract). Check that no raw CSV rows or secrets appear in server logs.
+
+## 7. Check two-user isolation
+
+Sign in as disposable user B on the **same Neon Auth branch** and obtain B's token. Keep A's token available in `$headersA` from the prior step. Run:
+
+```powershell
+$tokenB = Read-Host -MaskInput 'User B Bearer JWT'
+$headersB = @{ Authorization = "Bearer $tokenB" }
+$accountsB = Invoke-RestMethod "$base/api/v1/accounts" -Headers $headersB
+$accountsB | Where-Object id -eq $demoAccount.id
+$response = Invoke-WebRequest "$base/api/v1/accounts/$($demoAccount.id)" -Headers $headersB -SkipHttpErrorCheck
+$response.StatusCode
+$response = Invoke-WebRequest "$base/api/v1/analytics/summary?account_id=$($demoAccount.id)" -Headers $headersB -SkipHttpErrorCheck
+$response.StatusCode
+```
+
+B's account list must contain no A demo account; the last two status codes must both be `404`. In `/docs`, repeat the ownership check for an A transaction ID (`GET /api/v1/transactions/{id}`), A import job ID (`GET /api/v1/imports/{id}`), and A category or rule (`PATCH` on that ID using disposable input); each must return `404` or otherwise deny modification without revealing A's data. B's unfiltered transaction, import, and analytics lists must exclude A's demo. Then create one synthetic account and transaction as B and verify A cannot read them. The [full automated suite](#1-run-the-full-local-gate) covers these ownership paths and financial edge cases with synthetic JWTs; this hosted check confirms the real Neon issuer, JWKS, audience, and subject mapping.
+
+Clear tokens from the PowerShell session when finished:
+
+```powershell
+Remove-Item Env:DEMO_BEARER_TOKEN -ErrorAction SilentlyContinue
+Remove-Variable tokenB, headersA, headersB -ErrorAction SilentlyContinue
+```
+
+If the Neon branch was created only for this review, delete that branch after the review to remove its disposable Auth users and synthetic data. Otherwise, retain the isolated demo branch for a repeatable portfolio walkthrough. Do not use the demo branch for personal finances.
+
+## 8. Release and troubleshooting
+
+For each later release, confirm the reviewed commit's CI check, deploy that commit manually from Render's **Deploys** page, wait for `/health/ready`, and repeat sections 4–7. An optional [Render deploy hook](https://render.com/docs/deploy-hooks) can be stored as the GitHub repository secret `RENDER_DEPLOY_HOOK_URL`; manually running `workflow_dispatch` then triggers the checked commit after CI passes. A deploy hook only starts deployment: inspect Render's result and rerun the smoke and demo checks before sharing the URL.
+
+| Symptom | Check |
+|---|---|
+| Build fails | `uv.lock` is current; local `docker build` passes; Dockerfile path points to root |
+| Startup fails | Both URLs are set for the same Neon branch; database URL has `postgresql+psycopg://` and TLS; database user can migrate |
+| Liveness `200`, readiness `503` | Neon connection and startup migration logs; Alembic revision and permissions |
+| Authenticated request `401` | Fresh `authClient.token()` JWT, paired branch, issuer, audience, and JWKS per [ADR-003](adr/ADR-003-neon-auth-and-authorization.md) |
+| Authenticated request `503` | Neon Auth URL and JWKS availability; an unconfigured Auth URL gives a generic service-unavailable response |
+| Slow response after idle | Free plan cold start; wait for readiness and retry |
+
+The [verification report](final-report.md) and [Phase 7 checkpoint](checkpoints/phase-7.md) distinguish local evidence from live release gates. Do not describe the API as publicly deployed until the hosted checks pass.

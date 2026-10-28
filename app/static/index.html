@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <title>CSV Lab · Personal Finance API</title>
+  <link rel="stylesheet" href="/demo-assets/styles.css">
+  <script src="/demo-assets/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="CSV Lab home"><span class="brand-mark">▦</span> CSV Lab</a>
+      <a class="docs-link" href="/docs">API docs <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow"><span class="pulse"></span> INTERACTIVE API DEMO</div>
+        <h1 id="page-title">See what your CSV <em>adds up to.</em></h1>
+        <p>Upload a transaction CSV and see the backend validate each row and calculate a clean financial summary. No account or sign-in needed.</p>
+      </section>
+
+      <div class="workspace">
+        <section class="panel upload-panel" aria-labelledby="upload-title">
+          <div class="section-heading"><span class="step">01</span><h2 id="upload-title">Choose a CSV</h2></div>
+          <form id="upload-form">
+            <label class="drop-zone" id="drop-zone" for="csv-file">
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>Drop your CSV here</strong>
+              <span>or <span class="browse">browse files</span></span>
+              <small>UTF-8 CSV · up to 2 MB · 5,000 rows</small>
+            </label>
+            <input id="csv-file" name="file" type="file" accept=".csv,text/csv" required>
+            <div class="selected-file" id="selected-file" hidden></div>
+            <button class="primary-button" id="submit-button" type="submit">Process CSV <span aria-hidden="true">→</span></button>
+          </form>
+          <p class="privacy-note">This demo analyzes the file in memory. It does not save transactions or connect to your accounts. Use synthetic data only.</p>
+        </section>
+
+        <section class="panel samples-panel" aria-labelledby="samples-title">
+          <div class="section-heading"><span class="step">02</span><h2 id="samples-title">Try a test file</h2></div>
+          <p class="muted">Download a ready-made CSV, then upload it above to see the results.</p>
+          <a class="sample" href="/samples/demo_transactions.csv" download>
+            <span class="sample-icon">CSV</span><span class="sample-copy"><strong>Everyday transactions</strong><small>5 rows · income, spending, refund, pending</small></span><span class="download" aria-label="Download">↓</span>
+          </a>
+          <a class="sample" href="/samples/mixed_results.csv" download>
+            <span class="sample-icon">CSV</span><span class="sample-copy"><strong>Mixed results</strong><small>5 rows · includes an invalid amount</small></span><span class="download" aria-label="Download">↓</span>
+          </a>
+          <div class="format-note"><strong>Required columns</strong><code>transaction_date, amount, description, kind</code><span>Optional: status, merchant, currency, external_transaction_id, category_id. Dates use YYYY-MM-DD; expenses are negative amounts.</span></div>
+        </section>
+      </div>
+
+      <section class="results" id="results" aria-labelledby="results-title" hidden>
+        <div class="results-heading"><div><div class="eyebrow">BACKEND RESPONSE</div><h2 id="results-title">Processing results</h2></div><span id="result-count" class="result-count"></span></div>
+        <div class="metric-grid" id="metric-grid"></div>
+        <div class="panel row-panel"><div class="row-heading"><h3>Row by row</h3><p>Pending rows are accepted but excluded from totals.</p></div><div class="table-wrap"><table><thead><tr><th scope="col">Row</th><th scope="col">Result</th><th scope="col">Kind</th><th scope="col">Amount</th><th scope="col">Details</th></tr></thead><tbody id="row-results"></tbody></table></div></div>
+      </section>
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+    </main>
+
+    <footer><span>Personal Finance Analytics API</span><span>Stateless CSV preview · USD</span></footer>
+  </div>
+</body>
+</html>
