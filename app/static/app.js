@@ -25,9 +25,10 @@ zone.addEventListener('drop', event => {
   }
 });
 
-function cell(text) {
+function cell(text, label) {
   const element = document.createElement('td');
   element.textContent = text;
+  element.dataset.label = label;
   return element;
 }
 
@@ -54,13 +55,14 @@ function render(data) {
   rowResults.replaceChildren();
   for (const row of data.rows) {
     const tr = document.createElement('tr');
-    tr.append(cell(String(row.row_number)));
+    tr.append(cell(String(row.row_number), 'Row'));
     const status = document.createElement('td');
+    status.dataset.label = 'Result';
     const pill = document.createElement('span');
     pill.className = `pill${row.status === 'failed' ? ' failed' : row.posted === false ? ' pending' : ''}`;
     pill.textContent = row.status === 'failed' ? 'Failed' : row.posted ? 'Posted' : 'Pending';
     status.append(pill);
-    tr.append(status, cell(row.kind || '—'), cell(row.amount ? `$${row.amount}` : '—'), cell(row.error_code || (row.posted ? 'Included in totals' : row.status === 'accepted' ? 'Excluded from totals' : 'Check row values')));
+    tr.append(status, cell(row.kind || '—', 'Kind'), cell(row.amount ? `$${row.amount}` : '—', 'Amount'), cell(row.error_code || (row.posted ? 'Included in totals' : row.status === 'accepted' ? 'Excluded from totals' : 'Check row values'), 'Details'));
     rowResults.append(tr);
   }
   document.querySelector('#result-count').textContent = `${data.accepted_count} accepted · ${data.failed_count} failed`;
