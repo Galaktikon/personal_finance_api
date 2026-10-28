@@ -4,7 +4,7 @@ These are MVP invariants. [ADR-002](adr/ADR-002-money-and-transaction-semantics.
 
 ## Money and currency
 
-Use Python `Decimal` and PostgreSQL `NUMERIC(19,2)`. Reject values with more than two fractional digits instead of rounding. API responses serialize monetary amounts as decimal strings. Reject currencies other than USD.
+Use Python `Decimal` and PostgreSQL `NUMERIC(19,2)`. The money parser and ORM validator reject values with more than two fractional digits instead of rounding; direct SQL clients must obey the same contract because PostgreSQL coerces values to the column scale. API responses serialize monetary amounts as decimal strings. Reject currencies other than USD.
 
 ## Transaction meaning
 
@@ -18,7 +18,9 @@ Use Python `Decimal` and PostgreSQL `NUMERIC(19,2)`. Reject values with more tha
 
 Store kind explicitly. Do not infer it from sign alone. Status is `pending`, `posted`, or `voided`; default analytics include posted only.
 
-An internal transfer is two signed transactions linked across the user's own accounts. A credit card purchase is an expense; paying the card from checking is a transfer. A refund is a separate positive transaction.
+An internal transfer is two signed transactions linked across distinct accounts owned by the same user. The database checks matching opposite amounts and transfer kinds, and prevents linked financial fields from changing until the link is removed. A credit card purchase is an expense; paying the card from checking is a transfer. A refund is a separate positive transaction.
+
+Categories have income or expense kind. Income transactions use income categories; expense and refund transactions use expense categories; transfers have no category.
 
 ## Analytics
 
