@@ -5,7 +5,7 @@ The [development plan](project-plan.md#12-development-phases) contains the full 
 | Phase | Deliverable | Checkpoint |
 |---|---|---|
 | 0 | Versioned plan, docs, ADRs, Mermaid sources, README | A contributor can start Phase 1 from clear scope and open decisions |
-| 1 | Runnable FastAPI foundation, local PostgreSQL, Alembic, CI, config | Clean checkout can be configured and run |
+| 1 | Runnable FastAPI foundation, local PostgreSQL, Alembic, CI, config | [Local checkpoint passed](checkpoints/phase-1.md); remote CI awaits a push |
 | 2 | Models, migrations, money/domain rules | Financial domain is internally consistent |
 | 3 | Verified Neon Auth integration and user-scoped CRUD | Users can manage only their own data |
 | 4 | CSV/JSON imports, duplicates, categorization | Synthetic imports reconcile repeatably |
