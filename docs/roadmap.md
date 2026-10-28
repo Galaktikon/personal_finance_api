@@ -9,7 +9,7 @@ The [development plan](project-plan.md#12-development-phases) contains the full 
 | 2 | Models, migrations, money/domain rules | [Local checkpoint passed](checkpoints/phase-2.md); remote CI awaits a push |
 | 3 | Verified Neon Auth JWT design and user-scoped CRUD | [Synthetic and PostgreSQL checkpoint](checkpoints/phase-3.md); live Neon smoke test pending |
 | 4 | CSV/JSON imports, duplicates, categorization, transfers | [Local checkpoint passed](checkpoints/phase-4.md); synthetic imports reconcile repeatably |
-| 5 | Summary and breakdown analytics | Results match independent expected totals |
+| 5 | Summary and breakdown analytics | [Local checkpoint passed](checkpoints/phase-5.md); results match independent expected totals |
 | 6 | Hardening and end-to-end tests | Controlled public deployment is ready |
 | 7 | Deployment, docs, synthetic demo, final report | Reviewer can exercise and verify the API |
 | 8 | Optional extensions | Begin only after MVP definition of done |

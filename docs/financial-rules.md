@@ -30,7 +30,7 @@ Categories have income or expense kind. Income transactions use income categorie
 - Net spending = gross expenses − refunds.
 - Net cash flow = gross income − gross expenses + refunds.
 
-Negative net spending is valid when refunds exceed expenses. Empty periods return valid zero amounts. Percentages with a zero denominator need a documented response convention before implementation.
+Negative net spending is valid when refunds exceed expenses. Empty summary periods return zero amounts; empty monthly and breakdown lists return no rows. Monthly trends omit months without posted activity. Category and merchant breakdowns include expenses and refunds, so their net spending reconciles with the summary. No percentages are published: a future percentage metric needs an explicit denominator and zero-denominator convention.
 
 ## Dates
 
