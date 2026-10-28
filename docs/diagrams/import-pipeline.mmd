@@ -1,0 +1,11 @@
+flowchart TD
+  Upload[CSV or JSON input] --> Limits[Check size, format, row count]
+  Limits --> Parse[Parse and normalize]
+  Parse --> Validate[Validate fields and ownership]
+  Validate --> Dedupe[External ID or fingerprint duplicate check]
+  Dedupe --> Categorize[Manual override, user rule, system rule, uncategorized]
+  Categorize --> Mode{Preview or commit?}
+  Mode -->|Preview| Response[Return row results without business writes]
+  Mode -->|Commit| Recheck[Revalidate and repeat duplicate checks]
+  Recheck --> Persist[Persist within defined transaction boundary]
+  Persist --> History[Record sanitized import history and row results]

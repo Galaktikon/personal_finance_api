@@ -1,0 +1,10 @@
+flowchart LR
+  Client[Client] --> Auth[Neon Auth]
+  Client --> API[FastAPI API]
+  API --> Verify[Credential verification and user resolution]
+  Verify -. supported validation flow to verify in Phase 3 .-> Auth
+  API --> Services[Application services]
+  Services --> Domain[Domain rules]
+  Services --> Repos[User-scoped repositories]
+  Repos --> DB[(PostgreSQL application data)]
+  Alembic[Alembic migrations] --> DB

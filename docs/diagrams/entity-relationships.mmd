@@ -1,0 +1,17 @@
+erDiagram
+  USER_PROFILE ||--o{ ACCOUNT : owns
+  USER_PROFILE ||--o{ TRANSACTION : owns
+  USER_PROFILE ||--o{ CATEGORY : may_own
+  USER_PROFILE ||--o{ CATEGORIZATION_RULE : may_own
+  USER_PROFILE ||--o{ IMPORT_JOB : owns
+  USER_PROFILE ||--o{ TRANSFER_LINK : owns
+  USER_PROFILE ||--o{ TRANSACTION_REVISION : owns
+  ACCOUNT ||--o{ TRANSACTION : contains
+  CATEGORY |o--o{ TRANSACTION : classifies
+  CATEGORY |o--o{ CATEGORIZATION_RULE : selected_by
+  CATEGORIZATION_RULE |o--o{ TRANSACTION : applied_to
+  IMPORT_JOB ||--o{ IMPORT_RECORD : records
+  IMPORT_RECORD |o--o| TRANSACTION : may_create
+  TRANSFER_LINK }o--|| TRANSACTION : source
+  TRANSFER_LINK }o--|| TRANSACTION : destination
+  TRANSACTION ||--o{ TRANSACTION_REVISION : revised_by
