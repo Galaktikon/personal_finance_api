@@ -4,6 +4,10 @@ FastAPI foundation for a personal finance analytics backend. The MVP manages acc
 
 **Status:** Phase 7 local deployment package verified. Public deployment is deferred at the user's request; live Neon Auth and remote CI remain open.
 
+## No-login CSV demo
+
+After starting the API locally, open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). The page offers two downloadable synthetic CSVs, accepts a CSV upload, and displays backend validation, posted and pending counts, row outcomes, and financial totals. The page and `POST /api/v1/demo/process` require no authentication and do not persist uploads. They use the existing CSV parser and transaction validation; account-specific duplicate detection, categorization, and saved imports remain on the authenticated routes. Use synthetic data only. The [public demo tests](tests/api/test_public_demo.py) cover the example totals and invalid rows.
+
 ## Local setup
 
 Install Python 3.11, [uv](https://docs.astral.sh/uv/), and Docker Desktop with its engine running. From the repository root:
@@ -53,7 +57,7 @@ Phase 6 adds sanitized request errors and logs, a 3 MB overall request body limi
 
 ## Reviewer and deployment walkthrough
 
-Start with the [reviewer guide](docs/reviewer-guide.md) for the architecture, API paths, and synthetic expected totals. Run the local synthetic demonstration without Neon using its listed PostgreSQL-backed test commands. To host the API, follow the [Render and Neon deployment guide](docs/deployment.md) and review the [Blueprint](render.yaml) before creating a service. The Docker image applies Alembic migrations before serving requests. After deployment, run `uv run --all-groups python scripts/smoke_deployment.py --base-url https://<service>.onrender.com`, then run the [demo loader](docs/demo.md) with a JWT from the paired Neon Auth branch. The [verification report](docs/final-report.md) separates local evidence from live checks.
+Start with the [reviewer guide](docs/reviewer-guide.md) for the architecture, API paths, and synthetic expected totals. Run the local synthetic demonstration without Neon using its listed PostgreSQL-backed test commands. The [manual Render and Neon guide](docs/deployment.md) gives the complete local gate, Web Service form values, environment variables, first deploy, live Auth and synthetic demo checks, two-user isolation, and later release steps. The optional [Blueprint](render.yaml) encodes the same service settings. The Docker image applies Alembic migrations before serving requests. The [verification report](docs/final-report.md) separates local evidence from live checks.
 
 ## Project docs
 

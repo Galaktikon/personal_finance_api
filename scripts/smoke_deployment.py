@@ -10,6 +10,7 @@ REQUIRED_PATHS = {
     "/api/v1/transactions",
     "/api/v1/imports",
     "/api/v1/analytics/summary",
+    "/api/v1/demo/process",
 }
 
 
@@ -23,6 +24,19 @@ def check_deployment(client: httpx.Client, token: str | None = None) -> None:
     schema.raise_for_status()
     if not REQUIRED_PATHS <= set(schema.json()["paths"]):
         raise RuntimeError("OpenAPI is missing required routes")
+    homepage = client.get("/")
+    homepage.raise_for_status()
+    if "CSV Lab" not in homepage.text:
+        raise RuntimeError("Public demo page is unavailable")
+    sample = client.get("/samples/demo_transactions.csv")
+    sample.raise_for_status()
+    demo = client.post(
+        "/api/v1/demo/process",
+        files={"file": ("demo_transactions.csv", sample.content, "text/csv")},
+    )
+    demo.raise_for_status()
+    if demo.json()["net_cash_flow"] != "2390.00":
+        raise RuntimeError("Public demo result differs from the synthetic sample")
     anonymous = client.get("/api/v1/accounts")
     if anonymous.status_code != 401:
         raise RuntimeError("Protected account route did not reject anonymous access")

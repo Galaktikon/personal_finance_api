@@ -1,0 +1,6 @@
+transaction_date,amount,description,kind,status,merchant,external_transaction_id
+2024-04-01,1800.00,Synthetic salary,income,posted,Demo Employer,mixed-salary-1
+2024-04-02,-42.25,Synthetic market purchase,expense,posted,Market,mixed-market-1
+2024-04-03,-12.00,Synthetic pending ride,expense,pending,Transit,mixed-ride-1
+2024-04-04,15.00,Synthetic return,refund,posted,Market,mixed-return-1
+2024-04-05,not-a-number,Synthetic invalid amount,expense,posted,Market,mixed-error-1
