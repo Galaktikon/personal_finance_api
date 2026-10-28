@@ -4,11 +4,13 @@ sequenceDiagram
   participant A as FastAPI
   participant D as Application DB
   C->>N: Sign in through supported flow
-  N-->>C: Supported credential or session
-  C->>A: Request with credential
-  Note over A,N: Verification method must be confirmed in Phase 3
-  A->>N: Verify credential or session if required by documented flow
-  N-->>A: Verified stable subject
+  N-->>C: Session cookie
+  C->>N: authClient.token()
+  N-->>C: Short-lived Bearer JWT
+  C->>A: Authorization Bearer JWT
+  A->>N: Fetch branch JWKS on cache miss or key rotation
+  N-->>A: Public verification keys
+  Note over A: Check EdDSA signature, issuer, audience, expiry, subject
   A->>D: Resolve UserProfile and query user-scoped data
   D-->>A: Authorized records
   A-->>C: Validated response

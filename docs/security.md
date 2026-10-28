@@ -1,6 +1,8 @@
 # Security and privacy
 
-Neon Auth / Managed Better Auth is the intended identity provider. The FastAPI business API must independently verify the credential before deriving a stable subject and resolving the internal `UserProfile`. The exact supported flow is an [open integration gate](adr/ADR-003-neon-auth-and-authorization.md); consult current official Neon documentation in Phase 3 before implementation.
+Neon Auth / Managed Better Auth is the identity provider. The FastAPI business API verifies a Bearer JWT against the branch-specific JWKS before deriving `sub` and resolving the internal `UserProfile`. The verified integration choice and remaining live-test limit are in [ADR-003](adr/ADR-003-neon-auth-and-authorization.md).
+
+The verifier accepts EdDSA only. It checks signature, key ID, issuer and audience against the configured Auth URL origin, expiry, issued-at time, authenticated role, and a nonempty subject. It caches the JWKS for five minutes, refreshes immediately for unknown keys, and uses a five-second fetch timeout. Missing or invalid credentials return a generic `401`; an unreachable JWKS returns `503`. No credentials or raw claims are logged.
 
 ## Authorization
 
@@ -17,6 +19,6 @@ Do not log bearer tokens, cookies, passwords, secrets, raw import rows, or unnec
 
 PostgreSQL row-level security is optional defense in depth. If added, document identity propagation and pooled-connection cleanup, then test policies independently of API authorization.
 
-## Verification gate
+## Environment and live verification
 
-Confirm credential type, signature/session validation, issuer, audience, expiry, key rotation, stable subject, local/test/production separation, and compatibility with a custom FastAPI backend. A token intended for Neon's Data API is not assumed valid for this API.
+Set `NEON_AUTH_BASE_URL` to the Auth URL of the same Neon branch as the application database. It is optional for local health and domain-only work; authenticated routes cannot operate without it, and production startup requires it. Tests use synthetic Ed25519 keys and a fake JWKS response. Before deployment, exercise sign-in, `authClient.token()`, and the FastAPI API against a real Neon Auth branch. A token accepted by Neon's Data API is not automatically trusted by this API.

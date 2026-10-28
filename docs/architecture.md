@@ -15,7 +15,7 @@ The API is a modular monolith: one FastAPI application and one PostgreSQL applic
 
 The client presents a supported Neon Auth credential. FastAPI verifies it using the integration chosen in [ADR-003](adr/ADR-003-neon-auth-and-authorization.md), maps its stable subject to an internal profile, and invokes a user-scoped service. The service uses repositories and commits within a defined transaction boundary. The response is validated before return.
 
-The credential type and verification mechanism are **unresolved** until official Neon documentation is checked in Phase 3. The [authentication diagram](diagrams/authentication-flow.mmd) depicts the intended trust boundary, not a verified protocol.
+The Phase 3 verifier uses Neon's documented JWT plugin flow: a client sends `authClient.token()` as a Bearer JWT, and FastAPI checks it against the branch JWKS before resolving `UserProfile`. See [ADR-003](adr/ADR-003-neon-auth-and-authorization.md) and the [authentication diagram](diagrams/authentication-flow.mmd). A live Neon branch smoke test remains before deployment.
 
 ## Data and deployment
 

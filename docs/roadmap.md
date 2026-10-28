@@ -7,8 +7,8 @@ The [development plan](project-plan.md#12-development-phases) contains the full 
 | 0 | Versioned plan, docs, ADRs, Mermaid sources, README | A contributor can start Phase 1 from clear scope and open decisions |
 | 1 | Runnable FastAPI foundation, local PostgreSQL, Alembic, CI, config | [Local checkpoint passed](checkpoints/phase-1.md); remote CI awaits a push |
 | 2 | Models, migrations, money/domain rules | [Local checkpoint passed](checkpoints/phase-2.md); remote CI awaits a push |
-| 3 | Verified Neon Auth integration and user-scoped CRUD | Users can manage only their own data |
-| 4 | CSV/JSON imports, duplicates, categorization | Synthetic imports reconcile repeatably |
+| 3 | Verified Neon Auth JWT design and user-scoped CRUD | [Synthetic and PostgreSQL checkpoint](checkpoints/phase-3.md); live Neon smoke test pending |
+| 4 | CSV/JSON imports, duplicates, categorization, transfers | [Local checkpoint passed](checkpoints/phase-4.md); synthetic imports reconcile repeatably |
 | 5 | Summary and breakdown analytics | Results match independent expected totals |
 | 6 | Hardening and end-to-end tests | Controlled public deployment is ready |
 | 7 | Deployment, docs, synthetic demo, final report | Reviewer can exercise and verify the API |
