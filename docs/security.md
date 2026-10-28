@@ -17,6 +17,8 @@ The verifier accepts EdDSA only. It checks signature, key ID, issuer and audienc
 
 Do not log bearer tokens, cookies, passwords, secrets, raw import rows, or unnecessary financial descriptions. Store credentials in environment variables or managed secrets; commit only an example configuration. Use TLS for remote database access, validate upload sizes and content, and return sanitized errors without traces.
 
+The API strips submitted values and user-supplied field names from `422` validation responses. Unexpected request failures return a generic `500` and emit only a fixed `request_failed` log event without exception text. The Docker command and documented local Uvicorn command disable raw access logs, which otherwise can include query strings. Operators should keep raw access logging disabled at any hosting proxy as well. The application rejects request bodies above `REQUEST_MAX_BYTES` (3 MB by default), including streamed bodies; imports have a lower file limit. List routes cap page size at 100.
+
 PostgreSQL row-level security is optional defense in depth. If added, document identity propagation and pooled-connection cleanup, then test policies independently of API authorization.
 
 ## Environment and live verification

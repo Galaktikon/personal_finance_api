@@ -25,3 +25,32 @@ def test_neon_auth_url_must_be_https() -> None:
             database_url="postgresql+psycopg://localhost/finance",
             neon_auth_base_url="http://auth.example.test/neondb/auth",
         )
+
+
+def test_request_limit_must_exceed_import_file_limit() -> None:
+    with pytest.raises(ValidationError, match="REQUEST_MAX_BYTES"):
+        Settings(
+            database_url="postgresql+psycopg://localhost/finance",
+            import_max_bytes=100,
+            request_max_bytes=100,
+        )
+
+
+def test_production_database_requires_tls_without_echoing_secret() -> None:
+    secret = "very-private-password"
+    with pytest.raises(ValidationError, match="sslmode") as error:
+        Settings(
+            app_env="production",
+            database_url=f"postgresql+psycopg://finance:{secret}@example.neon.tech/finance",
+            neon_auth_base_url="https://auth.example.neon.tech/neondb/auth",
+        )
+    assert secret not in str(error.value)
+
+
+def test_production_accepts_tls_database_url() -> None:
+    settings = Settings(
+        app_env="production",
+        database_url="postgresql+psycopg://finance:example@example.neon.tech/finance?sslmode=require",
+        neon_auth_base_url="https://auth.example.neon.tech/neondb/auth",
+    )
+    assert settings.app_env == "production"

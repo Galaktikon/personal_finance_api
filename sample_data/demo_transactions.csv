@@ -1,0 +1,6 @@
+transaction_date,amount,description,kind,status,merchant,external_transaction_id
+2024-02-28,2500.00,Synthetic paycheck,income,posted,Demo Employer,demo-salary-1
+2024-02-29,-80.00,Synthetic groceries,expense,posted,Market,demo-grocery-1
+2024-02-29,20.00,Synthetic grocery return,refund,posted,Market,demo-refund-1
+2024-03-01,-50.00,Synthetic transit,expense,posted,Transit,demo-transit-1
+2024-03-02,-10.00,Synthetic pending purchase,expense,pending,Market,demo-pending-1

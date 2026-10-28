@@ -2,7 +2,7 @@
 
 FastAPI foundation for a personal finance analytics backend. The MVP manages accounts and transactions, imports synthetic CSV/JSON data, and reports spending and cash flow. It uses PostgreSQL, SQLAlchemy, Alembic, and Neon Auth JWT verification.
 
-**Status:** Phase 5 authenticated CRUD, CSV/JSON imports, categorization rules, transfer matching, and analytics.
+**Status:** Phase 7 local deployment package verified. Public deployment is deferred at the user's request; live Neon Auth and remote CI remain open.
 
 ## Local setup
 
@@ -13,7 +13,7 @@ Copy-Item .env.example .env
 uv sync --locked --all-groups
 docker compose up -d db
 uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --no-access-log
 ```
 
 The example database user and password are for local Docker Compose only. Set `DATABASE_URL` to a Neon PostgreSQL URL using the `postgresql+psycopg://` scheme and TLS settings for a remote environment. Never commit `.env`.
@@ -49,6 +49,12 @@ Phase 4 tests use synthetic transactions and the same synthetic authentication. 
 
 Phase 5 adds summary, monthly trend, category, and merchant analytics at `/api/v1/analytics/*`. The [API contract](docs/api-contracts.md#phase-5-analytics-contract) defines filters, response fields, and empty-period behavior. The synthetic tests reconcile the published totals against separately calculated amounts.
 
+Phase 6 adds sanitized request errors and logs, a 3 MB overall request body limit, rollback checks, and a [repeatable synthetic demo](docs/demo.md). `REQUEST_MAX_BYTES` must exceed `IMPORT_MAX_BYTES` for multipart overhead. The local server command disables raw access logs because URLs can contain sensitive query values.
+
+## Reviewer and deployment walkthrough
+
+Start with the [reviewer guide](docs/reviewer-guide.md) for the architecture, API paths, and synthetic expected totals. Run the local synthetic demonstration without Neon using its listed PostgreSQL-backed test commands. To host the API, follow the [Render and Neon deployment guide](docs/deployment.md) and review the [Blueprint](render.yaml) before creating a service. The Docker image applies Alembic migrations before serving requests. After deployment, run `uv run --all-groups python scripts/smoke_deployment.py --base-url https://<service>.onrender.com`, then run the [demo loader](docs/demo.md) with a JWT from the paired Neon Auth branch. The [verification report](docs/final-report.md) separates local evidence from live checks.
+
 ## Project docs
 
 - [Development plan](docs/project-plan.md) — complete scope, phases, acceptance criteria, and definition of done.
@@ -59,6 +65,8 @@ Phase 5 adds summary, monthly trend, category, and merchant analytics at `/api/v
 - [Phase 3 checkpoint](docs/checkpoints/phase-3.md) — authentication and user-scoped CRUD verification.
 - [Phase 4 checkpoint](docs/checkpoints/phase-4.md) — import, categorization, and transfer verification.
 - [Phase 5 checkpoint](docs/checkpoints/phase-5.md) — analytics formulas and PostgreSQL verification.
+- [Phase 6 checkpoint](docs/checkpoints/phase-6.md) — hardening and end-to-end verification.
+- [Phase 7 checkpoint](docs/checkpoints/phase-7.md) — deployment package and live release gates.
 
 The documentation establishes intended future behavior. Use synthetic financial data only.
 

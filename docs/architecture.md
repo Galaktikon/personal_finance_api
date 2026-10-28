@@ -19,8 +19,8 @@ The Phase 3 verifier uses Neon's documented JWT plugin flow: a client sends `aut
 
 ## Data and deployment
 
-Local development uses Docker Compose PostgreSQL. Deployment is intended to use Neon PostgreSQL and managed Python hosting. The hosting provider and current free-tier constraints are open choices. Database and auth environments must be separated across local, test, and production.
+Local development uses Docker Compose PostgreSQL. The [deployment guide](deployment.md) selects a Render Docker web service and a paired Neon PostgreSQL and Neon Auth branch for the portfolio preview. Database and Auth environments must be separated across local, test, and production. The Docker image applies Alembic migrations before serving requests; the Render health check uses `/health/ready`.
 
 ## Repository layout
 
-The planned `app/`, `alembic/`, `tests/`, `scripts/`, and `sample_data/` structure is in the [development plan](project-plan.md#4-repository-structure). Phase 1 creates only the foundation needed to run and test the API.
+The `app/`, `alembic/`, `tests/`, `scripts/`, and `sample_data/` layout follows the [development plan](project-plan.md#4-repository-structure).
