@@ -1,0 +1,95 @@
+/* Keep content inside the viewport at every width. */
+.workspace > *,
+.metric-grid > *,
+.sample-copy,
+.results-heading > * {
+  min-width: 0;
+}
+
+.table-wrap {
+  overflow: visible;
+}
+
+table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+th,
+td {
+  padding-inline: 12px;
+  overflow-wrap: anywhere;
+}
+
+th:first-child,
+td:first-child {
+  padding-left: 24px;
+  width: 10%;
+}
+
+th:last-child,
+td:last-child {
+  padding-right: 24px;
+  width: 32%;
+}
+
+@media (max-width: 760px) {
+  .results-heading {
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  table,
+  tbody,
+  tr,
+  td {
+    display: block;
+    width: 100%;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    padding: 0 14px 14px;
+  }
+
+  tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    border: 1px solid #e4ece6;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+
+  td,
+  td:first-child,
+  td:last-child {
+    border: 0;
+    padding: 0;
+    width: auto;
+  }
+
+  td::before {
+    content: attr(data-label);
+    display: block;
+    color: #82958a;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+
+  td:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 420px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
