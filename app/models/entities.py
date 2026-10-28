@@ -10,12 +10,14 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, validates
@@ -109,6 +111,15 @@ class Transaction(Timestamped, Base):
     __tablename__ = "transactions"
     __table_args__ = (
         UniqueConstraint("user_id", "id", name="uq_transactions_owner_id"),
+        Index(
+            "uq_transactions_import_external_id",
+            "user_id",
+            "account_id",
+            "source_identifier",
+            "external_transaction_id",
+            unique=True,
+            postgresql_where=text("external_transaction_id IS NOT NULL"),
+        ),
         ForeignKeyConstraint(
             ["user_id", "account_id"],
             ["accounts.user_id", "accounts.id"],
@@ -179,12 +190,14 @@ class ImportJob(Timestamped, Base):
     __tablename__ = "import_jobs"
     __table_args__ = (
         UniqueConstraint("user_id", "id", name="uq_import_jobs_owner_id"),
+        UniqueConstraint("user_id", "idempotency_key", name="uq_import_jobs_idempotency_key"),
         CheckConstraint("source_format IN ('csv', 'json')", name="ck_import_jobs_format"),
         CheckConstraint(
             "status IN ('processing', 'completed', 'failed')", name="ck_import_jobs_status"
         ),
         CheckConstraint(
-            "total_rows >= 0 AND created_count >= 0 AND duplicate_count >= 0 AND failed_count >= 0",
+            "total_rows >= 0 AND created_count >= 0 AND updated_count >= 0 "
+            "AND duplicate_count >= 0 AND failed_count >= 0",
             name="ck_import_jobs_nonnegative_counts",
         ),
     )
@@ -196,10 +209,14 @@ class ImportJob(Timestamped, Base):
     source_format: Mapped[str] = mapped_column(String(10), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     total_rows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     duplicate_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     failed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_summary: Mapped[str | None] = mapped_column(Text)
@@ -221,7 +238,8 @@ class ImportRecord(Base):
         UniqueConstraint("import_job_id", "row_number", name="uq_import_records_job_row"),
         CheckConstraint("row_number > 0", name="ck_import_records_row_positive"),
         CheckConstraint(
-            "status IN ('created', 'duplicate', 'failed')", name="ck_import_records_status"
+            "status IN ('created', 'updated', 'duplicate', 'failed')",
+            name="ck_import_records_status",
         ),
     )
 
@@ -232,6 +250,7 @@ class ImportRecord(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     transaction_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     error_code: Mapped[str | None] = mapped_column(String(80))
+    warning_code: Mapped[str | None] = mapped_column(String(80))
     fingerprint: Mapped[str | None] = mapped_column(String(64))
 
 
@@ -264,6 +283,8 @@ class TransferLink(Timestamped, Base):
     source_transaction_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     destination_transaction_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="matched")
+    source_previous: Mapped[dict[str, str | None] | None] = mapped_column(JSON)
+    destination_previous: Mapped[dict[str, str | None] | None] = mapped_column(JSON)
 
 
 class TransactionRevision(Base):

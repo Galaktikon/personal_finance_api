@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     neon_auth_base_url: str | None = None
+    import_max_bytes: int = Field(default=2_000_000, ge=1, le=20_000_000)
+    import_max_rows: int = Field(default=5_000, ge=1, le=100_000)
 
     @field_validator("database_url")
     @classmethod

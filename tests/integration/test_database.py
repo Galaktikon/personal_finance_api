@@ -15,7 +15,7 @@ def test_postgresql_connection() -> None:
         with engine.connect() as connection:
             assert connection.execute(text("SELECT 1")).scalar_one() == 1
             version = connection.execute(text("SELECT version_num FROM alembic_version"))
-            assert version.scalar_one() == "877f154026dd"
+            assert version.scalar_one() == "1a4b_phase4"
     finally:
         engine.dispose()
 

@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -26,3 +26,14 @@ def get_current_user(
     session.execute(statement)
     session.commit()
     return session.scalars(select(UserProfile).where(UserProfile.auth_subject_id == subject)).one()
+
+
+def get_existing_user(
+    subject: Annotated[str, Depends(get_verified_subject)],
+    session: Annotated[Session, Depends(get_session)],
+) -> UserProfile:
+    """Read-only identity resolution for import previews."""
+    profile = session.scalar(select(UserProfile).where(UserProfile.auth_subject_id == subject))
+    if profile is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Account not found")
+    return profile
