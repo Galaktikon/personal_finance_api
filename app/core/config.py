@@ -1,13 +1,13 @@
 from functools import lru_cache
 from typing import Literal
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
     app_env: Literal["local", "test", "production"] = "local"
     database_url: str
@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     def require_production_auth(self) -> "Settings":
         if self.app_env == "production" and not self.neon_auth_base_url:
             raise ValueError("NEON_AUTH_BASE_URL is required in production")
+        if self.app_env == "production":
+            sslmode = parse_qs(urlsplit(self.database_url).query).get("sslmode", [None])[0]
+            if sslmode not in {"require", "verify-ca", "verify-full"}:
+                raise ValueError("Production DATABASE_URL requires TLS sslmode")
         if self.request_max_bytes <= self.import_max_bytes:
             raise ValueError("REQUEST_MAX_BYTES must exceed IMPORT_MAX_BYTES")
         return self

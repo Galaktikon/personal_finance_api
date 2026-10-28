@@ -11,6 +11,8 @@ The [project development plan](project-plan.md) is the full scope and phased del
 | HTTP surface | [API contracts](api-contracts.md) |
 | CSV/JSON processing | [Import pipeline](import-pipeline.md) |
 | Synthetic demo | [Demo workflow](demo.md) |
+| Reviewer walkthrough | [Reviewer guide](reviewer-guide.md) |
+| Release evidence | [Portfolio verification report](final-report.md) |
 | Authentication and data isolation | [Security](security.md) |
 | Verification approach | [Testing strategy](testing-strategy.md) |
 | Environments and release gate | [Deployment](deployment.md) |

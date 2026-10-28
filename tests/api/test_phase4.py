@@ -35,6 +35,7 @@ from app.models import (
     TransferLink,
 )
 from scripts.demo_synthetic import run_demo
+from scripts.smoke_deployment import check_deployment
 
 AUTH_URL = "https://phase4.example.test/neondb/auth"
 ORIGIN = "https://phase4.example.test"
@@ -621,6 +622,11 @@ def test_synthetic_demo_is_repeatable(api4: Harness) -> None:
     with Session(api4.connection, join_transaction_mode="create_savepoint") as session:
         assert count(session, ImportJob) == 1
         assert count(session, Transaction) == 5
+
+
+def test_deployment_smoke_contract_with_synthetic_auth(api4: Harness) -> None:
+    token = api4.headers("alice")["Authorization"].split(" ", 1)[1]
+    check_deployment(api4.client, token)
 
 
 def test_validation_errors_and_logs_do_not_echo_private_input(api4: Harness) -> None:

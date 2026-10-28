@@ -1,0 +1,22 @@
+services:
+  - type: web
+    runtime: docker
+    name: personal-finance-api
+    plan: free
+    autoDeployTrigger: "off"
+    healthCheckPath: /health/ready
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: NEON_AUTH_BASE_URL
+        sync: false
+      - key: PORT
+        value: 10000
+      - key: IMPORT_MAX_BYTES
+        value: 2000000
+      - key: IMPORT_MAX_ROWS
+        value: 5000
+      - key: REQUEST_MAX_BYTES
+        value: 3000000

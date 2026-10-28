@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   check:
@@ -46,3 +47,24 @@ jobs:
           python -m uv run alembic check
       - name: Run tests
         run: python -m uv run pytest -q
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reviewed commit on Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo 'Configure the RENDER_DEPLOY_HOOK_URL repository secret first.' >&2
+            exit 1
+          fi
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            *\?*) separator='&' ;;
+            *) separator='?' ;;
+          esac
+          curl --fail --silent --show-error --request POST --output /dev/null \
+            "${RENDER_DEPLOY_HOOK_URL}${separator}ref=${COMMIT_SHA}"
